@@ -16,12 +16,23 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================================================
 -- PART 2: DROP EXISTING OBJECTS (safe re-run — idempotent)
 -- ============================================================================
--- Drop triggers first (they depend on functions)
-DROP TRIGGER IF EXISTS on_ticket_updated ON public.tickets;
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-DROP TRIGGER IF EXISTS on_ticket_status_change ON public.tickets;
+-- Wrapped in a DO block so it never errors on a fresh database
+DO $$ BEGIN
+  -- Drop triggers (only if their parent tables exist)
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='tickets') THEN
+    DROP TRIGGER IF EXISTS on_ticket_updated ON public.tickets;
+    DROP TRIGGER IF EXISTS on_ticket_status_change ON public.tickets;
+  END IF;
 
--- Drop policies (must drop before tables can be altered)
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='information_schema' OR (table_schema='auth' AND table_name='users')) THEN
+    BEGIN
+      DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END;
+  END IF;
+END $$;
+
+-- Drop policies (only if tables exist)
 DO $$ DECLARE
   r RECORD;
 BEGIN
@@ -31,6 +42,20 @@ BEGIN
     WHERE schemaname = 'public'
   ) LOOP
     EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I', r.policyname, r.schemaname, r.tablename);
+  END LOOP;
+END $$;
+
+-- Drop storage policies safely
+DO $$ DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN (
+    SELECT policyname
+    FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects'
+      AND policyname IN ('Users upload own attachments', 'Users read accessible attachments', 'Users delete own attachments')
+  ) LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON storage.objects', r.policyname);
   END LOOP;
 END $$;
 
@@ -438,37 +463,55 @@ ON CONFLICT (id) DO UPDATE SET
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- Storage RLS: authenticated users can upload to their own folder
-CREATE POLICY "Users upload own attachments"
-  ON storage.objects FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    bucket_id = 'ticket-attachments'
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users upload own attachments' AND tablename = 'objects' AND schemaname = 'storage'
+  ) THEN
+    CREATE POLICY "Users upload own attachments"
+      ON storage.objects FOR INSERT
+      TO authenticated
+      WITH CHECK (
+        bucket_id = 'ticket-attachments'
+        AND (storage.foldername(name))[1] = auth.uid()::text
+      );
+  END IF;
+END $$;
 
 -- Storage RLS: users can read attachments for tickets they can access
-CREATE POLICY "Users read accessible attachments"
-  ON storage.objects FOR SELECT
-  TO authenticated
-  USING (
-    bucket_id = 'ticket-attachments'
-    AND (
-      (storage.foldername(name))[1] = auth.uid()::text
-      OR public.current_user_role() IN ('admin', 'staff')
-    )
-  );
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users read accessible attachments' AND tablename = 'objects' AND schemaname = 'storage'
+  ) THEN
+    CREATE POLICY "Users read accessible attachments"
+      ON storage.objects FOR SELECT
+      TO authenticated
+      USING (
+        bucket_id = 'ticket-attachments'
+        AND (
+          (storage.foldername(name))[1] = auth.uid()::text
+          OR public.current_user_role() IN ('admin', 'staff')
+        )
+      );
+  END IF;
+END $$;
 
 -- Storage RLS: users can delete their own uploads; admins delete any
-CREATE POLICY "Users delete own attachments"
-  ON storage.objects FOR DELETE
-  TO authenticated
-  USING (
-    bucket_id = 'ticket-attachments'
-    AND (
-      (storage.foldername(name))[1] = auth.uid()::text
-      OR public.current_user_role() = 'admin'
-    )
-  );
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users delete own attachments' AND tablename = 'objects' AND schemaname = 'storage'
+  ) THEN
+    CREATE POLICY "Users delete own attachments"
+      ON storage.objects FOR DELETE
+      TO authenticated
+      USING (
+        bucket_id = 'ticket-attachments'
+        AND (
+          (storage.foldername(name))[1] = auth.uid()::text
+          OR public.current_user_role() = 'admin'
+        )
+      );
+  END IF;
+END $$;
 
 
 -- ============================================================================
