@@ -247,29 +247,48 @@ export async function fetchTickets(user: Profile): Promise<Ticket[]> {
 
 export async function fetchTicketById(ticketId: string): Promise<Ticket | null> {
   if (isSupabaseConfigured()) {
-    const supabase = getSupabaseBrowserClient()!;
-    const { data, error } = await supabase
-      .from("tickets")
-      .select(
+    try {
+      const supabase = getSupabaseBrowserClient()!;
+      const { data, error } = await supabase
+        .from("tickets")
+        .select(
+          `
+          *,
+          customer:profiles!tickets_customer_id_fkey(full_name, email),
+          staff:profiles!tickets_assigned_staff_id_fkey(full_name)
         `
-        *,
-        customer:profiles!tickets_customer_id_fkey(full_name, email),
-        staff:profiles!tickets_assigned_staff_id_fkey(full_name)
-      `
-      )
-      .eq("id", ticketId)
-      .single();
+        )
+        .eq("id", ticketId)
+        .single();
 
-    if (error || !data) return null;
-    const row = data as Record<string, unknown>;
-    const cust = row.customer as { full_name?: string; email?: string } | null;
-    const st = row.staff as { full_name?: string } | null;
-    return {
-      ...(row as unknown as Ticket),
-      customer_name: cust?.full_name || "Customer",
-      customer_email: cust?.email || "",
-      assigned_staff_name: st?.full_name || null,
-    };
+      if (error) {
+        if (isTableMissingError(error)) {
+          console.warn("Supabase 'tickets' table not found. Using local fallback.");
+        } else if (error.code !== "PGRST116") {
+          // PGRST116 = "not found" which is a valid empty result
+          throw new Error(error.message);
+        }
+      }
+      if (data) {
+        const row = data as Record<string, unknown>;
+        const cust = row.customer as { full_name?: string; email?: string } | null;
+        const st = row.staff as { full_name?: string } | null;
+        return {
+          ...(row as unknown as Ticket),
+          customer_name: cust?.full_name || "Customer",
+          customer_email: cust?.email || "",
+          assigned_staff_name: st?.full_name || null,
+        };
+      }
+      // If table missing, fall through to local
+      if (error && isTableMissingError(error)) {
+        // fall through
+      } else {
+        return null;
+      }
+    } catch (e) {
+      if (!isTableMissingError(e)) throw e;
+    }
   }
 
   const tickets = readStorage<Ticket[]>(STORAGE_KEYS.tickets, DEMO_TICKETS);
@@ -287,13 +306,25 @@ export async function lookupTicketByNumber(
 ): Promise<Ticket | null> {
   const clean = ticketNumber.trim().toUpperCase();
   if (isSupabaseConfigured()) {
-    const supabase = getSupabaseBrowserClient()!;
-    const { data } = await supabase
-      .from("tickets")
-      .select("*")
-      .ilike("ticket_number", clean)
-      .maybeSingle();
-    return (data as Ticket) || null;
+    try {
+      const supabase = getSupabaseBrowserClient()!;
+      const { data, error } = await supabase
+        .from("tickets")
+        .select("*")
+        .ilike("ticket_number", clean)
+        .maybeSingle();
+      if (error && isTableMissingError(error)) {
+        const tickets = readStorage<Ticket[]>(STORAGE_KEYS.tickets, DEMO_TICKETS);
+        return tickets.find((t) => t.ticket_number.toUpperCase() === clean) || null;
+      }
+      return (data as Ticket) || null;
+    } catch (e) {
+      if (isTableMissingError(e)) {
+        const tickets = readStorage<Ticket[]>(STORAGE_KEYS.tickets, DEMO_TICKETS);
+        return tickets.find((t) => t.ticket_number.toUpperCase() === clean) || null;
+      }
+      throw e;
+    }
   }
   const tickets = readStorage<Ticket[]>(STORAGE_KEYS.tickets, DEMO_TICKETS);
   return tickets.find((t) => t.ticket_number.toUpperCase() === clean) || null;
@@ -611,27 +642,38 @@ export async function fetchTicketUpdates(
   ticketId: string
 ): Promise<TicketUpdate[]> {
   if (isSupabaseConfigured()) {
-    const supabase = getSupabaseBrowserClient()!;
-    const { data, error } = await supabase
-      .from("ticket_updates")
-      .select(
+    try {
+      const supabase = getSupabaseBrowserClient()!;
+      const { data, error } = await supabase
+        .from("ticket_updates")
+        .select(
+          `
+          *,
+          actor:profiles!ticket_updates_updated_by_fkey(full_name, role)
         `
-        *,
-        actor:profiles!ticket_updates_updated_by_fkey(full_name, role)
-      `
-      )
-      .eq("ticket_id", ticketId)
-      .order("created_at", { ascending: true });
+        )
+        .eq("ticket_id", ticketId)
+        .order("created_at", { ascending: true });
 
-    if (error) throw new Error(error.message);
-    return (data || []).map((row: Record<string, unknown>) => {
-      const actor = row.actor as { full_name?: string; role?: UserRole } | null;
-      return {
-        ...(row as unknown as TicketUpdate),
-        updated_by_name: actor?.full_name || "System",
-        updated_by_role: actor?.role || "staff",
-      };
-    });
+      if (error) {
+        if (isTableMissingError(error)) {
+          console.warn("Supabase 'ticket_updates' table not found. Using local fallback.");
+        } else {
+          throw new Error(error.message);
+        }
+      } else {
+        return (data || []).map((row: Record<string, unknown>) => {
+          const actor = row.actor as { full_name?: string; role?: UserRole } | null;
+          return {
+            ...(row as unknown as TicketUpdate),
+            updated_by_name: actor?.full_name || "System",
+            updated_by_role: actor?.role || "staff",
+          };
+        });
+      }
+    } catch (e) {
+      if (!isTableMissingError(e)) throw e;
+    }
   }
 
   const updates = readStorage<TicketUpdate[]>(
@@ -682,9 +724,13 @@ export async function fetchNotifications(
 
 export async function markNotificationRead(id: string): Promise<void> {
   if (isSupabaseConfigured()) {
-    const supabase = getSupabaseBrowserClient()!;
-    await supabase.from("notifications").update({ is_read: true }).eq("id", id);
-    return;
+    try {
+      const supabase = getSupabaseBrowserClient()!;
+      await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+      return;
+    } catch {
+      // fall through to local
+    }
   }
   const notifs = readStorage<NotificationItem[]>(
     STORAGE_KEYS.notifications,
@@ -699,12 +745,16 @@ export async function markNotificationRead(id: string): Promise<void> {
 
 export async function markAllNotificationsRead(userId: string): Promise<void> {
   if (isSupabaseConfigured()) {
-    const supabase = getSupabaseBrowserClient()!;
-    await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("user_id", userId);
-    return;
+    try {
+      const supabase = getSupabaseBrowserClient()!;
+      await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("user_id", userId);
+      return;
+    } catch {
+      // fall through to local
+    }
   }
   const notifs = readStorage<NotificationItem[]>(
     STORAGE_KEYS.notifications,
