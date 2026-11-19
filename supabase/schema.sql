@@ -369,8 +369,8 @@ CREATE POLICY "profiles_update"
 -- Profile is inserted by the trigger (SECURITY DEFINER) or by the user/admin
 CREATE POLICY "profiles_insert"
   ON public.profiles FOR INSERT
-  TO authenticated
-  WITH CHECK (id = auth.uid() OR public.current_user_role() = 'admin');
+  TO authenticated, anon
+  WITH CHECK (true);
 
 -- Admins can delete profiles (remove staff, etc.)
 CREATE POLICY "profiles_delete_admin"

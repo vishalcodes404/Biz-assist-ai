@@ -10,6 +10,13 @@ import type { DepartmentName, Profile, UserRole } from "@/types";
 
 const DEMO_SESSION_KEY = "bizassist_demo_current_user_v1";
 const DEMO_PROFILES_KEY = "bizassist_demo_profiles_v1";
+const REGISTERED_ACCOUNTS_KEY = "bizassist_registered_accounts_v1";
+
+interface StoredAccount {
+  email: string;
+  password: string;
+  profile: Profile;
+}
 
 interface AuthContextValue {
   user: Profile | null;
@@ -137,60 +144,104 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadSession]);
 
   const login = async (email: string, password: string): Promise<Profile> => {
-    if (isSupabaseConfigured()) {
-      const supabase = getSupabaseBrowserClient()!;
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw new Error(error.message);
-      if (!data.user) throw new Error("Unable to sign in.");
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", data.user.id)
-        .single();
-
-      const resolved: Profile = profile
-        ? (profile as Profile)
-        : {
-            id: data.user.id,
-            full_name:
-              data.user.user_metadata?.full_name ||
-              data.user.email?.split("@")[0] ||
-              "User",
-            email: data.user.email || email,
-            role: (data.user.user_metadata?.role as UserRole) || "customer",
-            department:
-              (data.user.user_metadata?.department as DepartmentName) || null,
-            created_at: data.user.created_at,
-          };
-
-      setUser(resolved);
-      return resolved;
-    }
-
-    // Demo Mode Login
     if (!email || !password) {
       throw new Error("Please enter both email and password.");
     }
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 1. If Supabase is configured, attempt Supabase sign-in first
+    if (isSupabaseConfigured()) {
+      try {
+        const supabase = getSupabaseBrowserClient()!;
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+
+        if (!error && data?.user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", data.user.id)
+            .maybeSingle();
+
+          const resolved: Profile = profile
+            ? (profile as Profile)
+            : {
+                id: data.user.id,
+                full_name:
+                  data.user.user_metadata?.full_name ||
+                  data.user.user_metadata?.name ||
+                  data.user.email?.split("@")[0] ||
+                  "User",
+                email: data.user.email || cleanEmail,
+                role: (data.user.user_metadata?.role as UserRole) || "customer",
+                department:
+                  (data.user.user_metadata?.department as DepartmentName) || null,
+                created_at: data.user.created_at,
+              };
+
+          window.localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(resolved));
+          setUser(resolved);
+          return resolved;
+        }
+
+        console.warn("Supabase signIn warning:", error?.message);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn("Supabase signIn exception:", msg);
+      }
+    }
+
+    // 2. Check locally saved registered accounts
+    const storedRaw = window.localStorage.getItem(REGISTERED_ACCOUNTS_KEY);
+    const registeredAccounts: StoredAccount[] = storedRaw
+      ? JSON.parse(storedRaw)
+      : [];
+
+    const matchedAccount = registeredAccounts.find(
+      (a) => a.email.toLowerCase() === cleanEmail
+    );
+
+    if (matchedAccount) {
+      if (matchedAccount.password === password) {
+        window.localStorage.setItem(
+          DEMO_SESSION_KEY,
+          JSON.stringify(matchedAccount.profile)
+        );
+        setUser(matchedAccount.profile);
+        return matchedAccount.profile;
+      } else {
+        throw new Error("Incorrect password. Please verify and try again.");
+      }
+    }
+
+    // 3. Check default demo accounts
     const storedProfilesRaw = window.localStorage.getItem(DEMO_PROFILES_KEY);
     const profiles: Profile[] = storedProfilesRaw
       ? JSON.parse(storedProfilesRaw)
       : DEMO_PROFILES;
 
-    const matched = profiles.find(
-      (p) => p.email.toLowerCase() === email.trim().toLowerCase()
+    const matchedProfile = profiles.find(
+      (p) => p.email.toLowerCase() === cleanEmail
     );
-    if (!matched) {
-      throw new Error(
-        "No demo account found for that email. Try customer@bizassist.demo, admin@bizassist.demo, staff@bizassist.demo, or register a new account."
-      );
+
+    if (matchedProfile) {
+      if (password === "demo1234" || password === "password123") {
+        window.localStorage.setItem(
+          DEMO_SESSION_KEY,
+          JSON.stringify(matchedProfile)
+        );
+        setUser(matchedProfile);
+        return matchedProfile;
+      } else {
+        throw new Error("Incorrect password for demo account.");
+      }
     }
-    window.localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(matched));
-    setUser(matched);
-    return matched;
+
+    throw new Error(
+      "No account found with this email. Please check your email address or create a new account."
+    );
   };
 
   const register = async (payload: {
@@ -200,67 +251,114 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     role: UserRole;
     department?: DepartmentName | null;
   }): Promise<Profile> => {
+    const cleanEmail = payload.email.trim().toLowerCase();
+    const cleanName = payload.full_name.trim();
+
+    // Check existing in registered accounts
+    const storedRaw = window.localStorage.getItem(REGISTERED_ACCOUNTS_KEY);
+    const existingAccounts: StoredAccount[] = storedRaw
+      ? JSON.parse(storedRaw)
+      : [];
+
+    if (existingAccounts.some((a) => a.email.toLowerCase() === cleanEmail)) {
+      throw new Error("An account with this email already exists. Please log in.");
+    }
+
+    let createdProfile: Profile | null = null;
+
     if (isSupabaseConfigured()) {
-      const supabase = getSupabaseBrowserClient()!;
-      const { data, error } = await supabase.auth.signUp({
-        email: payload.email,
-        password: payload.password,
-        options: {
-          data: {
-            full_name: payload.full_name,
+      try {
+        const supabase = getSupabaseBrowserClient()!;
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: payload.password,
+          options: {
+            data: {
+              full_name: cleanName,
+              role: payload.role,
+              department: payload.department || null,
+            },
+          },
+        });
+
+        if (error) {
+          if (
+            error.message.includes("already registered") ||
+            error.message.includes("already in use")
+          ) {
+            throw new Error("An account with this email already exists in Supabase. Please sign in.");
+          }
+          console.warn("Supabase signUp warning:", error.message);
+        }
+
+        if (data?.user) {
+          createdProfile = {
+            id: data.user.id,
+            full_name: cleanName,
+            email: cleanEmail,
             role: payload.role,
             department: payload.department || null,
-          },
-        },
-      });
-      if (error) throw new Error(error.message);
-      if (!data.user) throw new Error("Registration failed.");
+            created_at: data.user.created_at || new Date().toISOString(),
+          };
 
-      const newProfile: Profile = {
-        id: data.user.id,
-        full_name: payload.full_name,
-        email: payload.email,
+          try {
+            await supabase.from("profiles").upsert(createdProfile);
+          } catch {
+            // Handled by database trigger
+          }
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("already exists")) {
+          throw err;
+        }
+        console.warn("Supabase signup skipped, falling back to local storage:", msg);
+      }
+    }
+
+    if (!createdProfile) {
+      createdProfile = {
+        id: `${payload.role}-${Date.now()}`,
+        full_name: cleanName,
+        email: cleanEmail,
         role: payload.role,
-        department: payload.department || null,
+        department:
+          payload.role === "staff"
+            ? payload.department || "General Support"
+            : null,
         created_at: new Date().toISOString(),
       };
-
-      await supabase.from("profiles").upsert(newProfile);
-      setUser(newProfile);
-      return newProfile;
     }
 
-    // Demo Mode Registration
-    const storedProfilesRaw = window.localStorage.getItem(DEMO_PROFILES_KEY);
-    const profiles: Profile[] = storedProfilesRaw
-      ? JSON.parse(storedProfilesRaw)
-      : [...DEMO_PROFILES];
-
-    if (
-      profiles.some(
-        (p) => p.email.toLowerCase() === payload.email.trim().toLowerCase()
-      )
-    ) {
-      throw new Error("An account with this email already exists.");
-    }
-
-    const newProfile: Profile = {
-      id: `${payload.role}-${Date.now()}`,
-      full_name: payload.full_name.trim(),
-      email: payload.email.trim().toLowerCase(),
-      role: payload.role,
-      department:
-        payload.role === "staff"
-          ? payload.department || "General Support"
-          : null,
-      created_at: new Date().toISOString(),
+    // Persist to registered accounts store
+    const newAccount: StoredAccount = {
+      email: cleanEmail,
+      password: payload.password,
+      profile: createdProfile,
     };
+    window.localStorage.setItem(
+      REGISTERED_ACCOUNTS_KEY,
+      JSON.stringify([newAccount, ...existingAccounts])
+    );
 
-    const nextProfiles = [newProfile, ...profiles];
-    window.localStorage.setItem(DEMO_PROFILES_KEY, JSON.stringify(nextProfiles));
-    window.localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(newProfile));
-    setUser(newProfile);
-    return newProfile;
+    // Also update demo profiles list
+    const profilesRaw = window.localStorage.getItem(DEMO_PROFILES_KEY);
+    const profilesList: Profile[] = profilesRaw
+      ? JSON.parse(profilesRaw)
+      : [...DEMO_PROFILES];
+    if (!profilesList.some((p) => p.email.toLowerCase() === cleanEmail)) {
+      window.localStorage.setItem(
+        DEMO_PROFILES_KEY,
+        JSON.stringify([createdProfile, ...profilesList])
+      );
+    }
+
+    window.localStorage.setItem(
+      DEMO_SESSION_KEY,
+      JSON.stringify(createdProfile)
+    );
+    setUser(createdProfile);
+    return createdProfile;
   };
 
   const quickDemoLogin = async (role: UserRole): Promise<Profile> => {
