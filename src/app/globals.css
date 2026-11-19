@@ -1,0 +1,390 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: #090103;
+    color: #ffffff;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Ensure select dropdown options stay dark crimson with pure white text */
+  option {
+    background-color: #1c050b;
+    color: #ffffff;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: rgba(255, 255, 255, 0.58) !important;
+  }
+}
+
+/* ============================================================================
+   Flowing Red Silk / Aurora Background Animations
+   ============================================================================ */
+@keyframes auroraFlow1 {
+  0% {
+    transform: translate3d(-6%, -4%, 0) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate3d(12%, 8%, 0) scale(1.12) rotate(12deg);
+  }
+  66% {
+    transform: translate3d(4%, 14%, 0) scale(0.96) rotate(-8deg);
+  }
+  100% {
+    transform: translate3d(-6%, -4%, 0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes auroraFlow2 {
+  0% {
+    transform: translate3d(6%, 5%, 0) scale(1.05) rotate(0deg);
+  }
+  35% {
+    transform: translate3d(-14%, -10%, 0) scale(1.16) rotate(-14deg);
+  }
+  70% {
+    transform: translate3d(-4%, 6%, 0) scale(0.95) rotate(10deg);
+  }
+  100% {
+    transform: translate3d(6%, 5%, 0) scale(1.05) rotate(0deg);
+  }
+}
+
+@keyframes auroraFlow3 {
+  0% {
+    transform: translate3d(-8%, 6%, 0) scale(1) skewX(-6deg);
+  }
+  50% {
+    transform: translate3d(18%, -12%, 0) scale(1.18) skewX(8deg);
+  }
+  100% {
+    transform: translate3d(-8%, 6%, 0) scale(1) skewX(-6deg);
+  }
+}
+
+@keyframes auroraFlow4 {
+  0% {
+    transform: translate3d(0%, 0%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-18%, -14%, 0) scale(1.15);
+  }
+  100% {
+    transform: translate3d(0%, 0%, 0) scale(1);
+  }
+}
+
+@keyframes silkSheen {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.aurora-blob-1 {
+  animation: auroraFlow1 16s ease-in-out infinite;
+  will-change: transform;
+}
+
+.aurora-blob-2 {
+  animation: auroraFlow2 19s ease-in-out infinite;
+  will-change: transform;
+}
+
+.aurora-blob-3 {
+  animation: auroraFlow3 14s ease-in-out infinite;
+  will-change: transform;
+}
+
+.aurora-blob-4 {
+  animation: auroraFlow4 21s ease-in-out infinite;
+  will-change: transform;
+}
+
+.aurora-wave-sheen {
+  animation: silkSheen 12s ease-in-out infinite;
+}
+
+/* ============================================================================
+   Glassmorphic Crimson Surfaces & Pure White Typography Across Entire App
+   ============================================================================ */
+.glass-card {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.11) 0%,
+    rgba(159, 18, 57, 0.18) 55%,
+    rgba(20, 4, 9, 0.52) 100%
+  );
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.glass-card-hover {
+  transition: transform 0.25s ease, border-color 0.25s ease,
+    box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.glass-card-hover:hover {
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow: 0 16px 40px rgba(225, 29, 72, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.crimson-pill-btn {
+  background: linear-gradient(135deg, #be123c 0%, #e11d48 55%, #9f1239 100%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(225, 29, 72, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: all 0.2s ease;
+}
+
+.crimson-pill-btn:hover {
+  background: linear-gradient(135deg, #e11d48 0%, #f43f5e 55%, #be123c 100%);
+  box-shadow: 0 12px 30px rgba(244, 63, 94, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.glass-pill-btn {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.glass-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.42);
+}
+
+/* Global Crimson-Glass Theme Coherence Layer
+   Ensures all dashboard surfaces, tables, forms, modals, and text maintain
+   the deep red glass contrast & crisp white text across every single page. */
+.crimson-theme-scope .bg-white,
+.crimson-theme-scope .bg-\[\#F8FAFC\] {
+  background-color: rgba(24, 4, 10, 0.56) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.crimson-theme-scope .bg-slate-50,
+.crimson-theme-scope .bg-slate-50\/80,
+.crimson-theme-scope .bg-slate-50\/70,
+.crimson-theme-scope .bg-slate-100,
+.crimson-theme-scope .bg-blue-50,
+.crimson-theme-scope .bg-blue-50\/80,
+.crimson-theme-scope .bg-blue-50\/70,
+.crimson-theme-scope .bg-blue-50\/60,
+.crimson-theme-scope .bg-blue-50\/50,
+.crimson-theme-scope .bg-blue-50\/40,
+.crimson-theme-scope .bg-emerald-50\/70,
+.crimson-theme-scope .bg-amber-50,
+.crimson-theme-scope .bg-rose-50,
+.crimson-theme-scope .bg-red-50 {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.crimson-theme-scope .bg-white\/90,
+.crimson-theme-scope .bg-white\/85 {
+  background-color: rgba(18, 3, 8, 0.72) !important;
+  backdrop-filter: blur(20px);
+}
+
+.crimson-theme-scope .border-slate-200,
+.crimson-theme-scope .border-slate-200\/90,
+.crimson-theme-scope .border-slate-200\/80,
+.crimson-theme-scope .border-slate-100,
+.crimson-theme-scope .border-blue-200,
+.crimson-theme-scope .border-blue-100,
+.crimson-theme-scope .border-purple-200,
+.crimson-theme-scope .border-emerald-200,
+.crimson-theme-scope .border-amber-200,
+.crimson-theme-scope .border-red-200 {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+.crimson-theme-scope .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Force crisp white typography across all text elements */
+.crimson-theme-scope,
+.crimson-theme-scope h1,
+.crimson-theme-scope h2,
+.crimson-theme-scope h3,
+.crimson-theme-scope h4,
+.crimson-theme-scope p,
+.crimson-theme-scope span,
+.crimson-theme-scope label,
+.crimson-theme-scope td,
+.crimson-theme-scope th,
+.crimson-theme-scope li,
+.crimson-theme-scope a,
+.crimson-theme-scope button,
+.crimson-theme-scope input,
+.crimson-theme-scope textarea,
+.crimson-theme-scope select,
+.crimson-theme-scope strong,
+.crimson-theme-scope code {
+  color: #ffffff !important;
+}
+
+/* Subtle white opacity hierarchy for muted helper text while keeping every word white */
+.crimson-theme-scope .text-slate-500,
+.crimson-theme-scope .text-slate-400 {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+.crimson-theme-scope .text-slate-600 {
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+/* Primary action buttons shifted to rich glowing crimson */
+.crimson-theme-scope .bg-blue-600 {
+  background: linear-gradient(135deg, #be123c 0%, #e11d48 60%, #9f1239 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 20px rgba(225, 29, 72, 0.35);
+}
+
+.crimson-theme-scope .hover\:bg-blue-700:hover,
+.crimson-theme-scope .hover\:bg-blue-500:hover {
+  background: linear-gradient(135deg, #e11d48 0%, #f43f5e 60%, #be123c 100%) !important;
+}
+
+/* Gradient hero / banner accents harmonized with velvet crimson */
+.crimson-theme-scope .from-blue-600 {
+  --tw-gradient-from: #be123c var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(190 18 60 / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.crimson-theme-scope .via-indigo-600 {
+  --tw-gradient-to: rgb(225 29 72 / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), #e11d48 var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
+}
+
+.crimson-theme-scope .to-purple-600,
+.crimson-theme-scope .to-indigo-600,
+.crimson-theme-scope .to-indigo-500,
+.crimson-theme-scope .to-purple-500 {
+  --tw-gradient-to: #881337 var(--tw-gradient-to-position) !important;
+}
+
+.crimson-theme-scope .from-slate-900 {
+  --tw-gradient-from: rgba(35, 5, 14, 0.9) var(--tw-gradient-from-position) !important;
+}
+
+.crimson-theme-scope .via-blue-900 {
+  --tw-gradient-stops: var(--tw-gradient-from), rgba(136, 19, 55, 0.85) var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
+}
+
+.crimson-theme-scope .to-indigo-900 {
+  --tw-gradient-to: rgba(24, 3, 10, 0.95) var(--tw-gradient-to-position) !important;
+}
+
+.crimson-theme-scope .bg-indigo-600 {
+  background-color: #e11d48 !important;
+}
+
+.crimson-theme-scope .bg-slate-900 {
+  background-color: rgba(16, 2, 7, 0.84) !important;
+  backdrop-filter: blur(22px);
+}
+
+.crimson-theme-scope .hover\:bg-slate-50:hover,
+.crimson-theme-scope .hover\:bg-slate-50\/70:hover,
+.crimson-theme-scope .hover\:bg-blue-50:hover,
+.crimson-theme-scope .hover\:bg-blue-50\/30:hover,
+.crimson-theme-scope .hover\:bg-slate-100:hover {
+  background-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.crimson-theme-scope .focus\:bg-white:focus {
+  background-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.crimson-theme-scope .focus\:border-blue-500:focus {
+  border-color: rgba(251, 113, 133, 0.75) !important;
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.25);
+}
+
+/* Custom sleek crimson scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 2, 6, 0.4);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(244, 63, 94, 0.45);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(244, 63, 94, 0.75);
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeInSlide 0.3s ease-out forwards;
+}
+
+@keyframes logoFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.03);
+  }
+}
+
+.animate-logo-float {
+  animation: logoFloat 2.8s ease-in-out infinite;
+}
+
+@keyframes loadingSlide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+.loading-indeterminate-bar {
+  animation: loadingSlide 1.4s ease-in-out infinite;
+}
