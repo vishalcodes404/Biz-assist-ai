@@ -51,6 +51,19 @@ function writeStorage<T>(key: string, value: T): void {
   }
 }
 
+function isTableMissingError(error: unknown): boolean {
+  if (!error) return false;
+  const err = error as { code?: string; message?: string };
+  const msg = String(err.message || "");
+  const code = String(err.code || "");
+  return (
+    code === "PGRST205" ||
+    msg.includes("Could not find the table") ||
+    msg.includes("relation") ||
+    msg.includes("schema cache")
+  );
+}
+
 export function generateTicketNumber(existingTickets: Ticket[]): string {
   const year = new Date().getFullYear();
   let maxSeq = 0;
@@ -70,13 +83,26 @@ export function generateTicketNumber(existingTickets: Ticket[]): string {
 // ============================================================================
 export async function fetchAllProfiles(): Promise<Profile[]> {
   if (isSupabaseConfigured()) {
-    const supabase = getSupabaseBrowserClient()!;
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data || []) as Profile[];
+    try {
+      const supabase = getSupabaseBrowserClient()!;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) {
+        if (isTableMissingError(error)) {
+          console.warn("Supabase 'profiles' table not found yet. Using local fallback.");
+          return readStorage<Profile[]>(STORAGE_KEYS.profiles, DEMO_PROFILES);
+        }
+        throw new Error(error.message);
+      }
+      return (data || []) as Profile[];
+    } catch (e) {
+      if (isTableMissingError(e)) {
+        return readStorage<Profile[]>(STORAGE_KEYS.profiles, DEMO_PROFILES);
+      }
+      throw e;
+    }
   }
   return readStorage<Profile[]>(STORAGE_KEYS.profiles, DEMO_PROFILES);
 }
@@ -157,37 +183,56 @@ export async function updateProfileRoleOrDepartment(
 // ============================================================================
 export async function fetchTickets(user: Profile): Promise<Ticket[]> {
   if (isSupabaseConfigured()) {
-    const supabase = getSupabaseBrowserClient()!;
-    let query = supabase
-      .from("tickets")
-      .select(
+    try {
+      const supabase = getSupabaseBrowserClient()!;
+      let query = supabase
+        .from("tickets")
+        .select(
+          `
+          *,
+          customer:profiles!tickets_customer_id_fkey(full_name, email),
+          staff:profiles!tickets_assigned_staff_id_fkey(full_name)
         `
-        *,
-        customer:profiles!tickets_customer_id_fkey(full_name, email),
-        staff:profiles!tickets_assigned_staff_id_fkey(full_name)
-      `
-      )
-      .order("created_at", { ascending: false });
+        )
+        .order("created_at", { ascending: false });
 
-    if (user.role === "customer") {
-      query = query.eq("customer_id", user.id);
-    } else if (user.role === "staff") {
-      query = query.eq("assigned_staff_id", user.id);
+      if (user.role === "customer") {
+        query = query.eq("customer_id", user.id);
+      } else if (user.role === "staff") {
+        query = query.eq("assigned_staff_id", user.id);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        if (isTableMissingError(error)) {
+          console.warn("Supabase 'tickets' table not found yet. Using local fallback.");
+          const tickets = readStorage<Ticket[]>(STORAGE_KEYS.tickets, DEMO_TICKETS);
+          if (user.role === "customer") return tickets.filter((t) => t.customer_id === user.id);
+          if (user.role === "staff") return tickets.filter((t) => t.assigned_staff_id === user.id);
+          return tickets;
+        }
+        throw new Error(error.message);
+      }
+
+      return (data || []).map((row: Record<string, unknown>) => {
+        const cust = row.customer as { full_name?: string; email?: string } | null;
+        const st = row.staff as { full_name?: string } | null;
+        return {
+          ...(row as unknown as Ticket),
+          customer_name: cust?.full_name || "Customer",
+          customer_email: cust?.email || "",
+          assigned_staff_name: st?.full_name || null,
+        };
+      });
+    } catch (e) {
+      if (isTableMissingError(e)) {
+        const tickets = readStorage<Ticket[]>(STORAGE_KEYS.tickets, DEMO_TICKETS);
+        if (user.role === "customer") return tickets.filter((t) => t.customer_id === user.id);
+        if (user.role === "staff") return tickets.filter((t) => t.assigned_staff_id === user.id);
+        return tickets;
+      }
+      throw e;
     }
-
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
-
-    return (data || []).map((row: Record<string, unknown>) => {
-      const cust = row.customer as { full_name?: string; email?: string } | null;
-      const st = row.staff as { full_name?: string } | null;
-      return {
-        ...(row as unknown as Ticket),
-        customer_name: cust?.full_name || "Customer",
-        customer_email: cust?.email || "",
-        assigned_staff_name: st?.full_name || null,
-      };
-    });
   }
 
   const tickets = readStorage<Ticket[]>(STORAGE_KEYS.tickets, DEMO_TICKETS);
@@ -608,15 +653,24 @@ export async function fetchNotifications(
   userId: string
 ): Promise<NotificationItem[]> {
   if (isSupabaseConfigured()) {
-    const supabase = getSupabaseBrowserClient()!;
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    if (error) throw new Error(error.message);
-    return (data || []) as NotificationItem[];
+    try {
+      const supabase = getSupabaseBrowserClient()!;
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) {
+        if (isTableMissingError(error)) {
+          return readStorage<NotificationItem[]>(STORAGE_KEYS.notifications, DEMO_NOTIFICATIONS).filter((n) => n.user_id === userId);
+        }
+        throw new Error(error.message);
+      }
+      return (data || []) as NotificationItem[];
+    } catch {
+      return readStorage<NotificationItem[]>(STORAGE_KEYS.notifications, DEMO_NOTIFICATIONS).filter((n) => n.user_id === userId);
+    }
   }
 
   const notifs = readStorage<NotificationItem[]>(

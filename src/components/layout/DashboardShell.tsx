@@ -191,16 +191,28 @@ export function DashboardShell({
         })}
       </nav>
 
-      {/* Demo mode indicator */}
-      {isDemoMode && (
+      {/* Supabase or Demo mode indicator */}
+      {isDemoMode ? (
         <div className="mx-3 mb-3 rounded-2xl border border-white/20 bg-rose-500/15 p-3 backdrop-blur-md">
           <div className="flex items-center gap-1.5 text-xs font-bold text-white">
             <Sparkles className="h-3.5 w-3.5" />
             <span>Demo Mode Active</span>
           </div>
           <p className="mt-1 text-[11px] leading-relaxed text-white/80">
-            Running with persistent local sample data. Add Supabase keys in{" "}
-            <code className="font-semibold text-white">.env.local</code> for live DB.
+            Running with persistent local sample data.
+          </p>
+        </div>
+      ) : (
+        <div className="mx-3 mb-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/15 p-3 backdrop-blur-md">
+          <div className="flex items-center gap-2 text-xs font-bold text-emerald-200">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+            </span>
+            <span>Supabase Cloud Connected</span>
+          </div>
+          <p className="mt-1 font-mono text-[10px] text-white/80 truncate">
+            kihcmgipkcmkrxklkavq
           </p>
         </div>
       )}
