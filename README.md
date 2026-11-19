@@ -45,9 +45,44 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## Deployment on Vercel
+## Deployment on Vercel & Localhost Co-existence
 
-1. Push this repository to GitHub.
-2. Import the repository into [Vercel](https://vercel.com).
-3. Add the environment variables from `.env.example` in Vercel Project Settings.
-4. Deploy!
+BizAssist AI is architected to run seamlessly on **both** your local machine (`http://localhost:3000`) and your production **Vercel** deployment with zero code changes.
+
+### 1. Deploy to Vercel in 1-Click
+1. Push this repository to your GitHub account (`vishalcodes404/Biz-assist-ai`).
+2. Go to [Vercel](https://vercel.com/new) and click **Import** on `Biz-assist-ai`.
+3. In the **Environment Variables** section, add your Supabase credentials:
+   - `NEXT_PUBLIC_SUPABASE_URL` = `https://kihcmgipkcmkrxklkavq.supabase.co`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = `sb_publishable_MnJoeUUO66dEUnqgdSudVg_ZC_l3Opx`
+   - *(Optional)* `OPENAI_API_KEY` or `GEMINI_API_KEY` for AI chatbot.
+4. Click **Deploy**.
+
+---
+
+### 2. Configure Supabase for BOTH Localhost and Vercel
+
+In your **[Supabase Project Dashboard → Authentication → URL Configuration](https://supabase.com/dashboard/project/kihcmgipkcmkrxklkavq/auth/url-configuration)**:
+
+1. **Site URL**:
+   Set this to your Vercel production URL (e.g., `https://biz-assist-ai.vercel.app`) or leave as `http://localhost:3000`.
+2. **Redirect URLs (Allow List)**:
+   Add all of the following entries so both local development and all Vercel deployments (including branch previews) can authenticate:
+   - `http://localhost:3000/**`
+   - `http://localhost:3000/auth/callback`
+   - `https://*.vercel.app/**`
+   - `https://*.vercel.app/auth/callback`
+   - `https://your-project-name.vercel.app/**`
+   - `https://your-project-name.vercel.app/auth/callback`
+3. Click **Save**.
+
+---
+
+### 3. Google OAuth for BOTH Localhost and Vercel
+
+In **Google Cloud Console** (Credentials → OAuth 2.0 Client ID):
+- Google Cloud only needs **ONE** Authorized Redirect URI for Supabase:
+  ```
+  https://kihcmgipkcmkrxklkavq.supabase.co/auth/v1/callback
+  ```
+- Because Google redirects to Supabase first, Supabase then routes back to either `localhost:3000` or your Vercel URL dynamically based on where the user initiated the login!
