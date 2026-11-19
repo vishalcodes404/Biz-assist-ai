@@ -220,14 +220,22 @@ export function DashboardShell({
       {/* User Card & Logout */}
       <div className="border-t border-white/15 p-3">
         <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-2.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/30 bg-gradient-to-br from-rose-500 to-red-700 text-xs font-bold text-white">
-            {user.full_name
-              .split(" ")
-              .map((w) => w[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase()}
-          </div>
+          {user.avatar_url ? (
+            <img
+              src={user.avatar_url}
+              alt={user.full_name}
+              className="h-9 w-9 shrink-0 rounded-full border border-white/30 object-cover"
+            />
+          ) : (
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/30 bg-gradient-to-br from-rose-500 to-red-700 text-xs font-bold text-white">
+              {user.full_name
+                .split(" ")
+                .map((w) => w[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase()}
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold text-white">
               {user.full_name}

@@ -97,6 +97,7 @@ CREATE TABLE public.profiles (
                      CHECK (role IN ('customer', 'admin', 'staff')),
   department    TEXT REFERENCES public.departments(department_name)
                      ON DELETE SET NULL,
+  avatar_url    TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -187,23 +188,58 @@ CREATE TRIGGER on_ticket_updated
   BEFORE UPDATE ON public.tickets
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
--- 5.2 Auto-create profile row when a user signs up via Supabase Auth
+-- 5.2 Auto-create profile row when a user signs up via Supabase Auth or Google OAuth
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  extracted_name TEXT;
+  extracted_avatar TEXT;
+  is_first_login BOOLEAN;
 BEGIN
-  INSERT INTO public.profiles (id, full_name, email, role, department)
+  -- Extract name from metadata (supports Google OAuth, GitHub, Email signup)
+  extracted_name := COALESCE(
+    NEW.raw_user_meta_data->>'full_name',
+    NEW.raw_user_meta_data->>'name',
+    NEW.raw_user_meta_data->>'user_name',
+    split_part(NEW.email, '@', 1)
+  );
+
+  -- Extract avatar URL if provided (Google sends 'avatar_url' or 'picture')
+  extracted_avatar := COALESCE(
+    NEW.raw_user_meta_data->>'avatar_url',
+    NEW.raw_user_meta_data->>'picture'
+  );
+
+  -- Check if this user ID already exists in profiles
+  SELECT NOT EXISTS(SELECT 1 FROM public.profiles WHERE id = NEW.id) INTO is_first_login;
+
+  -- Insert or update profile gracefully
+  INSERT INTO public.profiles (id, full_name, email, role, department, avatar_url)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    extracted_name,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'role', 'customer'),
-    NEW.raw_user_meta_data->>'department'
+    NEW.raw_user_meta_data->>'department',
+    extracted_avatar
   )
   ON CONFLICT (id) DO UPDATE SET
-    full_name  = EXCLUDED.full_name,
-    email      = EXCLUDED.email,
-    role       = EXCLUDED.role,
-    department = EXCLUDED.department;
+    full_name   = COALESCE(EXCLUDED.full_name, public.profiles.full_name),
+    email       = EXCLUDED.email,
+    avatar_url  = COALESCE(EXCLUDED.avatar_url, public.profiles.avatar_url),
+    department  = COALESCE(EXCLUDED.department, public.profiles.department);
+    -- NOTE: role is intentionally preserved on conflict so admin/staff roles are never overwritten
+
+  -- If it was their first login, insert a welcome notification!
+  IF is_first_login THEN
+    INSERT INTO public.notifications (user_id, ticket_id, message)
+    VALUES (
+      NEW.id,
+      NULL,
+      'Welcome to BizAssist AI, ' || extracted_name || '! Your account is active. You can submit complaints or ask our AI Copilot anytime.'
+    );
+  END IF;
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

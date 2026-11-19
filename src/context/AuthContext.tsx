@@ -16,6 +16,7 @@ interface AuthContextValue {
   loading: boolean;
   isDemoMode: boolean;
   login: (email: string, password: string) => Promise<Profile>;
+  loginWithGoogle: () => Promise<void>;
   register: (payload: {
     full_name: string;
     email: string;
@@ -56,29 +57,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } = await supabase.auth.getSession();
 
         if (session?.user) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .single();
+          let profile: Profile | null = null;
+          try {
+            const { data } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", session.user.id)
+              .maybeSingle();
+            if (data) profile = data as Profile;
+          } catch {
+            // ignore if table not ready
+          }
 
           if (profile) {
-            setUser(profile as Profile);
+            setUser(profile);
           } else {
-            // Fallback profile from auth metadata
-            setUser({
+            // First time login (e.g. from Google OAuth): insert profile row
+            const googleName =
+              session.user.user_metadata?.full_name ||
+              session.user.user_metadata?.name ||
+              session.user.email?.split("@")[0] ||
+              "Customer";
+            const googleAvatar =
+              session.user.user_metadata?.avatar_url ||
+              session.user.user_metadata?.picture ||
+              null;
+
+            const newProfile: Profile = {
               id: session.user.id,
-              full_name:
-                session.user.user_metadata?.full_name ||
-                session.user.email?.split("@")[0] ||
-                "User",
+              full_name: googleName,
               email: session.user.email || "",
               role: (session.user.user_metadata?.role as UserRole) || "customer",
               department:
                 (session.user.user_metadata?.department as DepartmentName) ||
                 null,
+              avatar_url: googleAvatar,
               created_at: session.user.created_at,
-            });
+            };
+
+            try {
+              await supabase.from("profiles").upsert(newProfile);
+            } catch {
+              // fallback
+            }
+
+            setUser(newProfile);
           }
         } else {
           setUser(null);
@@ -249,6 +272,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return login(emailMap[role], "demo1234");
   };
 
+  const loginWithGoogle = async (): Promise<void> => {
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseBrowserClient()!;
+      const redirectTo = `${window.location.origin}/auth/callback`;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        },
+      });
+      if (error) throw new Error(error.message);
+      return;
+    }
+
+    // Demo Mode: simulate Google ID sign-in
+    const storedProfilesRaw = window.localStorage.getItem(DEMO_PROFILES_KEY);
+    const profiles: Profile[] = storedProfilesRaw
+      ? JSON.parse(storedProfilesRaw)
+      : [...DEMO_PROFILES];
+
+    const demoGoogleEmail = "google.alex@example.com";
+    let matched = profiles.find(
+      (p) => p.email.toLowerCase() === demoGoogleEmail
+    );
+
+    if (!matched) {
+      // First-time Google user in demo mode
+      matched = {
+        id: `customer-google-${Date.now()}`,
+        full_name: "Alex Morgan (Google)",
+        email: demoGoogleEmail,
+        role: "customer",
+        department: null,
+        avatar_url: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80",
+        created_at: new Date().toISOString(),
+      };
+      profiles.unshift(matched);
+      window.localStorage.setItem(DEMO_PROFILES_KEY, JSON.stringify(profiles));
+    }
+
+    window.localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(matched));
+    setUser(matched);
+  };
+
   const logout = async () => {
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseBrowserClient()!;
@@ -266,6 +337,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         isDemoMode,
         login,
+        loginWithGoogle,
         register,
         quickDemoLogin,
         logout,
