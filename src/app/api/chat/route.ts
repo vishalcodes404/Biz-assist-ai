@@ -195,6 +195,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const openRouterKey = process.env.OPENROUTER_API_KEY;
+    const openRouterModel =
+      process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
     const openAiKey = process.env.OPENAI_API_KEY;
     const geminiKey = process.env.GEMINI_API_KEY;
 
@@ -202,7 +205,96 @@ export async function POST(req: NextRequest) {
       ? `\n\nLIVE DATABASE TICKET CONTEXT:\nTicket Number: ${matchedTicket.ticket_number}\nTitle: ${matchedTicket.title}\nStatus: ${matchedTicket.status}\nDepartment: ${matchedTicket.department}\nPriority: ${matchedTicket.priority}\nAssigned Staff: ${matchedTicket.assigned_staff_name || "Unassigned"}\nLast Updated: ${matchedTicket.updated_at}`
       : "";
 
-    // Option 1: OpenAI API (Server-side only)
+    // Option 1: OpenRouter AI API (Primary LLM Provider)
+    if (openRouterKey && openRouterKey.length > 10) {
+      try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openRouterKey}`,
+            "HTTP-Referer": "https://biz-assist-ai.vercel.app",
+            "X-Title": "BizAssist AI",
+          },
+          body: JSON.stringify({
+            model: openRouterModel,
+            temperature: 0.4,
+            max_tokens: 450,
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT + ticketContextText },
+              ...history.map((m) => ({
+                role: m.role === "assistant" ? "assistant" : "user",
+                content: m.content,
+              })),
+              { role: "user", content: message },
+            ],
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const reply =
+            data?.choices?.[0]?.message?.content?.trim() ||
+            "I'm here to help! Could you share a bit more detail?";
+          return NextResponse.json({
+            reply,
+            mode: "live-ai",
+            provider: "OpenRouter AI",
+            model: openRouterModel,
+            suggestedAction:
+              reply.toLowerCase().includes("submit") ||
+              reply.toLowerCase().includes("ticket")
+                ? { label: "Submit New Complaint", href: "/customer/new-complaint" }
+                : undefined,
+          });
+        } else {
+          // Automatic fallback to high-reliability Llama 3.3 on OpenRouter
+          const fallbackRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${openRouterKey}`,
+              "HTTP-Referer": "https://biz-assist-ai.vercel.app",
+              "X-Title": "BizAssist AI",
+            },
+            body: JSON.stringify({
+              model: "meta-llama/llama-3.3-70b-instruct",
+              temperature: 0.4,
+              max_tokens: 450,
+              messages: [
+                { role: "system", content: SYSTEM_PROMPT + ticketContextText },
+                ...history.map((m) => ({
+                  role: m.role === "assistant" ? "assistant" : "user",
+                  content: m.content,
+                })),
+                { role: "user", content: message },
+              ],
+            }),
+          });
+          if (fallbackRes.ok) {
+            const data = await fallbackRes.json();
+            const reply =
+              data?.choices?.[0]?.message?.content?.trim() ||
+              "I'm here to help! Could you share a bit more detail?";
+            return NextResponse.json({
+              reply,
+              mode: "live-ai",
+              provider: "OpenRouter AI",
+              model: "meta-llama/llama-3.3-70b-instruct",
+              suggestedAction:
+                reply.toLowerCase().includes("submit") ||
+                reply.toLowerCase().includes("ticket")
+                  ? { label: "Submit New Complaint", href: "/customer/new-complaint" }
+                  : undefined,
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("OpenRouter API error, falling back:", err);
+      }
+    }
+
+    // Option 2: OpenAI API (Secondary)
     if (openAiKey && openAiKey.length > 10) {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
