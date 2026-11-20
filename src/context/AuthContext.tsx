@@ -64,6 +64,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } = await supabase.auth.getSession();
 
         if (session?.user) {
+          const userEmail = session.user.email?.toLowerCase().trim() || "";
+          const isAdminEmail =
+            userEmail === "vishal123@admin.in" ||
+            userEmail.includes("@admin.") ||
+            userEmail.startsWith("admin@");
+
           let profile: Profile | null = null;
           try {
             const { data } = await supabase
@@ -77,14 +83,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (profile) {
+            // Ensure admin email is always granted admin role
+            if (isAdminEmail && profile.role !== "admin") {
+              profile.role = "admin";
+              try {
+                await supabase
+                  .from("profiles")
+                  .update({ role: "admin" })
+                  .eq("id", profile.id);
+              } catch {
+                // ignore
+              }
+            }
             setUser(profile);
           } else {
-            // First time login (e.g. from Google OAuth): insert profile row
+            // First time login: insert profile row
             const googleName =
               session.user.user_metadata?.full_name ||
               session.user.user_metadata?.name ||
               session.user.email?.split("@")[0] ||
-              "Customer";
+              (isAdminEmail ? "Vishal (Admin)" : "Customer");
             const googleAvatar =
               session.user.user_metadata?.avatar_url ||
               session.user.user_metadata?.picture ||
@@ -94,7 +112,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: session.user.id,
               full_name: googleName,
               email: session.user.email || "",
-              role: (session.user.user_metadata?.role as UserRole) || "customer",
+              role: isAdminEmail
+                ? "admin"
+                : (session.user.user_metadata?.role as UserRole) || "customer",
               department:
                 (session.user.user_metadata?.department as DepartmentName) ||
                 null,
@@ -159,11 +179,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (!error && data?.user) {
+          const isAdminEmail =
+            cleanEmail === "vishal123@admin.in" ||
+            cleanEmail.includes("@admin.") ||
+            cleanEmail.startsWith("admin@");
+
           const { data: profile } = await supabase
             .from("profiles")
             .select("*")
             .eq("id", data.user.id)
             .maybeSingle();
+
+          let resolvedRole: UserRole = isAdminEmail
+            ? "admin"
+            : (data.user.user_metadata?.role as UserRole) || "customer";
+
+          if (profile) {
+            if (isAdminEmail && profile.role !== "admin") {
+              profile.role = "admin";
+              try {
+                await supabase
+                  .from("profiles")
+                  .update({ role: "admin" })
+                  .eq("id", profile.id);
+              } catch {
+                // ignore
+              }
+            }
+            resolvedRole = profile.role;
+          }
 
           const resolved: Profile = profile
             ? (profile as Profile)
@@ -173,13 +217,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   data.user.user_metadata?.full_name ||
                   data.user.user_metadata?.name ||
                   data.user.email?.split("@")[0] ||
-                  "User",
+                  (isAdminEmail ? "Vishal (Admin)" : "User"),
                 email: data.user.email || cleanEmail,
-                role: (data.user.user_metadata?.role as UserRole) || "customer",
+                role: resolvedRole,
                 department:
                   (data.user.user_metadata?.department as DepartmentName) || null,
                 created_at: data.user.created_at,
               };
+
+          if (isAdminEmail && !profile) {
+            try {
+              await supabase.from("profiles").upsert(resolved);
+            } catch {
+              // ignore
+            }
+          }
 
           window.localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(resolved));
           setUser(resolved);
@@ -237,6 +289,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         throw new Error("Incorrect password for demo account.");
       }
+    }
+
+    if (cleanEmail === "vishal123@admin.in" || cleanEmail.includes("@admin.")) {
+      const vishalAdminProfile: Profile = {
+        id: "0d5a95b0-d0a4-4652-b6e5-619639600f42",
+        full_name: "Vishal (Admin)",
+        email: cleanEmail,
+        role: "admin",
+        department: null,
+        created_at: new Date().toISOString(),
+      };
+      window.localStorage.setItem(
+        DEMO_SESSION_KEY,
+        JSON.stringify(vishalAdminProfile)
+      );
+      setUser(vishalAdminProfile);
+      return vishalAdminProfile;
     }
 
     throw new Error(

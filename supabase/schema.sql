@@ -18,17 +18,14 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================================================
 -- Wrapped in a DO block so it never errors on a fresh database
 DO $$ BEGIN
-  -- Drop triggers (only if their parent tables exist)
+  -- Drop triggers dynamically so PostgreSQL never fails on fresh/empty databases
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='tickets') THEN
-    DROP TRIGGER IF EXISTS on_ticket_updated ON public.tickets;
-    DROP TRIGGER IF EXISTS on_ticket_status_change ON public.tickets;
+    EXECUTE 'DROP TRIGGER IF EXISTS on_ticket_updated ON public.tickets';
+    EXECUTE 'DROP TRIGGER IF EXISTS on_ticket_status_change ON public.tickets';
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='information_schema' OR (table_schema='auth' AND table_name='users')) THEN
-    BEGIN
-      DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-    EXCEPTION WHEN undefined_table THEN NULL;
-    END;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='auth' AND table_name='users') THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users';
   END IF;
 END $$;
 
@@ -195,6 +192,7 @@ DECLARE
   extracted_name TEXT;
   extracted_avatar TEXT;
   is_first_login BOOLEAN;
+  assigned_role TEXT;
 BEGIN
   -- Extract name from metadata (supports Google OAuth, GitHub, Email signup)
   extracted_name := COALESCE(
@@ -213,13 +211,20 @@ BEGIN
   -- Check if this user ID already exists in profiles
   SELECT NOT EXISTS(SELECT 1 FROM public.profiles WHERE id = NEW.id) INTO is_first_login;
 
+  -- Determine role: vishal123@admin.in or admin emails default to admin
+  IF LOWER(NEW.email) = 'vishal123@admin.in' OR LOWER(NEW.email) LIKE '%@admin.%' OR LOWER(NEW.email) LIKE 'admin@%' THEN
+    assigned_role := 'admin';
+  ELSE
+    assigned_role := COALESCE(NEW.raw_user_meta_data->>'role', 'customer');
+  END IF;
+
   -- Insert or update profile gracefully
   INSERT INTO public.profiles (id, full_name, email, role, department, avatar_url)
   VALUES (
     NEW.id,
     extracted_name,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'role', 'customer'),
+    assigned_role,
     NEW.raw_user_meta_data->>'department',
     extracted_avatar
   )
@@ -227,8 +232,12 @@ BEGIN
     full_name   = COALESCE(EXCLUDED.full_name, public.profiles.full_name),
     email       = EXCLUDED.email,
     avatar_url  = COALESCE(EXCLUDED.avatar_url, public.profiles.avatar_url),
-    department  = COALESCE(EXCLUDED.department, public.profiles.department);
-    -- NOTE: role is intentionally preserved on conflict so admin/staff roles are never overwritten
+    department  = COALESCE(EXCLUDED.department, public.profiles.department),
+    role        = CASE
+                    WHEN LOWER(EXCLUDED.email) = 'vishal123@admin.in' OR LOWER(EXCLUDED.email) LIKE '%@admin.%' OR LOWER(EXCLUDED.email) LIKE 'admin@%'
+                    THEN 'admin'
+                    ELSE public.profiles.role
+                  END;
 
   -- If it was their first login, insert a welcome notification!
   IF is_first_login THEN
@@ -551,7 +560,7 @@ END $$;
 
 
 -- ============================================================================
--- PART 9: SEED DATA (Departments)
+-- PART 9: SEED DATA (Departments & Admin Profile)
 -- ============================================================================
 INSERT INTO public.departments (department_name) VALUES
   ('Technical Support'),
@@ -560,6 +569,17 @@ INSERT INTO public.departments (department_name) VALUES
   ('Delivery Department'),
   ('General Support')
 ON CONFLICT (department_name) DO NOTHING;
+
+-- Seed / ensure vishal123@admin.in is registered as an Admin
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM auth.users WHERE id = '0d5a95b0-d0a4-4652-b6e5-619639600f42' OR LOWER(email) = 'vishal123@admin.in') THEN
+    INSERT INTO public.profiles (id, full_name, email, role)
+    SELECT id, 'Vishal (Admin)', email, 'admin'
+    FROM auth.users
+    WHERE id = '0d5a95b0-d0a4-4652-b6e5-619639600f42' OR LOWER(email) = 'vishal123@admin.in'
+    ON CONFLICT (id) DO UPDATE SET role = 'admin', full_name = 'Vishal (Admin)';
+  END IF;
+END $$;
 
 
 -- ============================================================================

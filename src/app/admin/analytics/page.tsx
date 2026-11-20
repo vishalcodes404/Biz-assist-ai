@@ -72,18 +72,19 @@ export default function AdminAnalyticsPage() {
       title="Analytics & Performance Reports"
       subtitle="Visual insights into complaint volume, department load, priorities, and resolution efficiency."
     >
+      {/* Actions header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">
+          <h2 className="text-lg font-bold text-white">
             Support Operations Summary
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-white/70">
             Computed dynamically from live ticket records.
           </p>
         </div>
         <button
           onClick={exportCsv}
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition"
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-rose-950/40 hover:from-red-500 hover:to-rose-500 transition"
         >
           <Download className="h-4 w-4" />
           Export CSV Report
@@ -125,11 +126,11 @@ export default function AdminAnalyticsPage() {
       {/* Visual Charts Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Chart 1: Tickets by Status */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-          <h3 className="text-sm font-bold text-slate-900">
+        <div className="glass-card rounded-2xl p-6 shadow-card">
+          <h3 className="text-sm font-bold text-white">
             Tickets by Lifecycle Status
           </h3>
-          <p className="mb-5 text-xs text-slate-500">
+          <p className="mb-5 text-xs text-white/70">
             Distribution across the 6 complaint workflow stages
           </p>
           <div className="space-y-3.5">
@@ -139,16 +140,16 @@ export default function AdminAnalyticsPage() {
               return (
                 <div key={status}>
                   <div className="mb-1 flex justify-between text-xs">
-                    <span className="font-semibold text-slate-700">
+                    <span className="font-semibold text-white/90">
                       {status}
                     </span>
-                    <span className="font-bold text-slate-900">
+                    <span className="font-bold text-white">
                       {count} ({pct}%)
                     </span>
                   </div>
-                  <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-white/10">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-blue-600 to-purple-500 transition-all duration-500"
+                      className="h-full rounded-full bg-gradient-to-r from-rose-500 to-red-600 transition-all duration-500"
                       style={{ width: `${Math.max(pct, count > 0 ? 6 : 0)}%` }}
                     />
                   </div>
@@ -159,11 +160,11 @@ export default function AdminAnalyticsPage() {
         </div>
 
         {/* Chart 2: Tickets by Category (Vertical Bar Chart) */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-          <h3 className="text-sm font-bold text-slate-900">
+        <div className="glass-card rounded-2xl p-6 shadow-card">
+          <h3 className="text-sm font-bold text-white">
             Complaints by Category
           </h3>
-          <p className="mb-5 text-xs text-slate-500">
+          <p className="mb-5 text-xs text-white/70">
             Volume breakdown across product & service issue areas
           </p>
           <div className="flex h-56 items-end justify-between gap-3 pt-4">
@@ -181,18 +182,18 @@ export default function AdminAnalyticsPage() {
                   key={cat}
                   className="flex flex-1 flex-col items-center gap-2"
                 >
-                  <span className="text-xs font-bold text-slate-800">
+                  <span className="text-xs font-bold text-white">
                     {count}
                   </span>
-                  <div className="flex h-40 w-full items-end justify-center rounded-xl bg-slate-50 p-1.5">
+                  <div className="flex h-40 w-full items-end justify-center rounded-xl border border-white/10 bg-white/5 p-1.5">
                     <div
-                      className="w-full max-w-[38px] rounded-lg bg-gradient-to-t from-blue-600 to-indigo-400 transition-all duration-500"
+                      className="w-full max-w-[38px] rounded-lg bg-gradient-to-t from-red-600 to-rose-400 transition-all duration-500"
                       style={{
                         height: `${Math.max(heightPct, count > 0 ? 12 : 4)}%`,
                       }}
                     />
                   </div>
-                  <span className="truncate text-[11px] font-semibold text-slate-500">
+                  <span className="truncate text-[11px] font-semibold text-white/70">
                     {cat}
                   </span>
                 </div>
@@ -202,8 +203,8 @@ export default function AdminAnalyticsPage() {
         </div>
 
         {/* Chart 3: Department Workload */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-          <h3 className="text-sm font-bold text-slate-900">
+        <div className="glass-card rounded-2xl p-6 shadow-card">
+          <h3 className="text-sm font-bold text-white">
             Department Allocation Workload
           </h3>
           <div className="mt-4 space-y-3">
@@ -212,16 +213,16 @@ export default function AdminAnalyticsPage() {
               const pct = Math.round((count / total) * 100);
               return (
                 <div key={dept} className="flex items-center gap-3">
-                  <span className="w-36 truncate text-xs font-semibold text-slate-700">
+                  <span className="w-36 truncate text-xs font-semibold text-white/90">
                     {dept}
                   </span>
-                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/10">
                     <div
-                      className="h-full rounded-full bg-indigo-600"
+                      className="h-full rounded-full bg-gradient-to-r from-rose-500 to-red-600"
                       style={{ width: `${Math.max(pct, count > 0 ? 8 : 0)}%` }}
                     />
                   </div>
-                  <span className="w-10 text-right text-xs font-bold text-slate-900">
+                  <span className="w-10 text-right text-xs font-bold text-white">
                     {count}
                   </span>
                 </div>
@@ -231,8 +232,8 @@ export default function AdminAnalyticsPage() {
         </div>
 
         {/* Chart 4: Priority Distribution */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-          <h3 className="text-sm font-bold text-slate-900">
+        <div className="glass-card rounded-2xl p-6 shadow-card">
+          <h3 className="text-sm font-bold text-white">
             Priority Breakdown
           </h3>
           <div className="mt-4 grid grid-cols-2 gap-3">
@@ -240,9 +241,9 @@ export default function AdminAnalyticsPage() {
               const count = tickets.filter((t) => t.priority === pri).length;
               const colors: Record<string, string> = {
                 Low: "border-white/20 bg-white/10 text-white",
-                Medium: "border-rose-300/30 bg-rose-500/20 text-white",
-                High: "border-orange-300/35 bg-orange-500/25 text-white",
-                Urgent: "border-red-300/45 bg-red-600/40 text-white",
+                Medium: "border-amber-400/30 bg-amber-500/20 text-white",
+                High: "border-orange-400/35 bg-orange-500/25 text-white",
+                Urgent: "border-red-400/45 bg-red-600/40 text-white",
               };
               return (
                 <div

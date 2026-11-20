@@ -56,7 +56,12 @@ export async function GET(request: Request) {
         .eq("id", user.id)
         .maybeSingle();
 
-      let targetRole: UserRole = "customer";
+      const isAdminEmail =
+        user.email?.toLowerCase() === "vishal123@admin.in" ||
+        user.email?.toLowerCase().includes("@admin.") ||
+        user.email?.toLowerCase().startsWith("admin@");
+
+      let targetRole: UserRole = isAdminEmail ? "admin" : "customer";
 
       if (!existingProfile) {
         // 2. First-time login: create new profile row for this Google ID
@@ -64,7 +69,7 @@ export async function GET(request: Request) {
           user.user_metadata?.full_name ||
           user.user_metadata?.name ||
           user.email?.split("@")[0] ||
-          "Customer";
+          (isAdminEmail ? "Vishal (Admin)" : "Customer");
         const avatarUrl =
           user.user_metadata?.avatar_url ||
           user.user_metadata?.picture ||
@@ -74,7 +79,7 @@ export async function GET(request: Request) {
           id: user.id,
           full_name: fullName,
           email: user.email || "",
-          role: "customer" as UserRole,
+          role: isAdminEmail ? ("admin" as UserRole) : ("customer" as UserRole),
           avatar_url: avatarUrl,
         };
 
@@ -85,13 +90,21 @@ export async function GET(request: Request) {
           await supabase.from("notifications").insert({
             user_id: user.id,
             ticket_id: null,
-            message: `Welcome to BizAssist AI, ${fullName}! Your account has been registered via Google.`,
+            message: `Welcome to BizAssist AI, ${fullName}! Your ${isAdminEmail ? "Admin" : "Customer"} account is ready.`,
           });
         } catch {
           // Non-blocking notification
         }
       } else {
-        targetRole = (existingProfile.role as UserRole) || "customer";
+        if (isAdminEmail && existingProfile.role !== "admin") {
+          await supabase
+            .from("profiles")
+            .update({ role: "admin" })
+            .eq("id", user.id);
+          targetRole = "admin";
+        } else {
+          targetRole = (existingProfile.role as UserRole) || "customer";
+        }
       }
 
       // If user specified an explicit destination (e.g. ?next=...), honor it

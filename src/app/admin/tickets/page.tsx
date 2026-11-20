@@ -174,20 +174,20 @@ export default function AdminTicketsPage() {
       subtitle="Search, filter, assign departments and staff members, and manage ticket priorities."
     >
       {/* Search & Multi-Filter Bar */}
-      <div className="mb-6 space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
+      <div className="glass-card mb-6 space-y-3 rounded-2xl p-4 shadow-card">
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by Ticket ID (BA-2026-...), customer name, or complaint title..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-10 pr-3 text-sm outline-none focus:border-blue-500 focus:bg-white transition"
+              className="w-full rounded-xl border border-white/20 bg-black/40 py-2 pl-10 pr-3 text-sm text-white placeholder-white/50 outline-none focus:border-rose-400 focus:bg-black/60 transition"
             />
           </div>
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-            <SlidersHorizontal className="h-4 w-4 text-blue-600" />
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-white/70">
+            <SlidersHorizontal className="h-4 w-4 text-rose-400" />
             <span>{filteredTickets.length} tickets shown</span>
           </div>
         </div>
@@ -196,7 +196,7 @@ export default function AdminTicketsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500"
+            className="rounded-xl border border-white/20 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white outline-none focus:border-rose-400"
           >
             <option value="All">All Statuses</option>
             {TICKET_STATUSES.map((s) => (
@@ -209,7 +209,7 @@ export default function AdminTicketsPage() {
           <select
             value={departmentFilter}
             onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500"
+            className="rounded-xl border border-white/20 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white outline-none focus:border-rose-400"
           >
             <option value="All">All Departments</option>
             {DEPARTMENTS.map((d) => (
@@ -222,7 +222,7 @@ export default function AdminTicketsPage() {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500"
+            className="rounded-xl border border-white/20 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white outline-none focus:border-rose-400"
           >
             <option value="All">All Categories</option>
             {TICKET_CATEGORIES.map((c) => (
@@ -235,7 +235,7 @@ export default function AdminTicketsPage() {
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500"
+            className="rounded-xl border border-white/20 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white outline-none focus:border-rose-400"
           >
             <option value="All">All Priorities</option>
             {TICKET_PRIORITIES.map((p) => (
@@ -248,19 +248,19 @@ export default function AdminTicketsPage() {
       </div>
 
       {/* Tickets Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+      <div className="glass-card overflow-hidden rounded-2xl shadow-card">
         {loading ? (
-          <div className="p-10 text-center text-sm text-slate-500">
+          <div className="p-10 text-center text-sm text-white/70">
             Loading ticket queue...
           </div>
         ) : filteredTickets.length === 0 ? (
-          <div className="p-10 text-center text-sm text-slate-500">
+          <div className="p-10 text-center text-sm text-white/70">
             No tickets match your current search and filter criteria.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase text-slate-500">
+              <thead className="border-b border-white/10 bg-white/5 text-xs uppercase text-white/70">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Ticket ID</th>
                   <th className="px-5 py-3 font-semibold">Customer & Issue</th>
@@ -271,30 +271,30 @@ export default function AdminTicketsPage() {
                   <th className="px-5 py-3 text-right font-semibold">Manage</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-white/10">
                 {filteredTickets.map((t) => (
-                  <tr key={t.id} className="hover:bg-blue-50/30 transition">
-                    <td className="whitespace-nowrap px-5 py-4 font-mono text-xs font-bold text-blue-600">
+                  <tr key={t.id} className="hover:bg-white/10 transition">
+                    <td className="whitespace-nowrap px-5 py-4 font-mono text-xs font-bold text-rose-300">
                       {t.ticket_number}
                     </td>
                     <td className="px-5 py-4">
-                      <p className="max-w-xs truncate text-xs font-bold text-slate-900">
+                      <p className="max-w-xs truncate text-xs font-bold text-white">
                         {t.title}
                       </p>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[11px] text-white/70">
                         {t.customer_name || "Customer"} • {t.category}
                       </p>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4 text-xs text-slate-700">
+                    <td className="whitespace-nowrap px-5 py-4 text-xs text-white/90">
                       {t.department}
                     </td>
                     <td className="whitespace-nowrap px-5 py-4 text-xs">
                       {t.assigned_staff_name ? (
-                        <span className="font-semibold text-slate-800">
+                        <span className="font-semibold text-white">
                           {t.assigned_staff_name}
                         </span>
                       ) : (
-                        <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-600">
+                        <span className="rounded-full border border-rose-500/40 bg-rose-950/60 px-2.5 py-0.5 text-[11px] font-semibold text-rose-300">
                           Unassigned
                         </span>
                       )}
@@ -308,7 +308,7 @@ export default function AdminTicketsPage() {
                     <td className="whitespace-nowrap px-5 py-4 text-right">
                       <button
                         onClick={() => openManageModal(t)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition"
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-rose-950/40 hover:from-red-500 hover:to-rose-500 transition"
                       >
                         <Eye className="h-3.5 w-3.5" />
                         Assign / Edit
@@ -324,45 +324,45 @@ export default function AdminTicketsPage() {
 
       {/* Manage Ticket Modal */}
       {selectedTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-fade-in">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
+          <div className="glass-card max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-white/20 bg-zinc-950/95 p-6 text-white shadow-2xl animate-fade-in">
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-lg bg-blue-50 px-2.5 py-1 font-mono text-xs font-bold text-blue-700">
+                  <span className="rounded-lg border border-rose-500/40 bg-rose-950/60 px-2.5 py-1 font-mono text-xs font-bold text-rose-300">
                     {selectedTicket.ticket_number}
                   </span>
                   <PriorityBadge priority={selectedTicket.priority} />
                   <StatusBadge status={selectedTicket.status} />
                 </div>
-                <h2 className="mt-2 text-lg font-extrabold text-slate-900">
+                <h2 className="mt-2 text-lg font-extrabold text-white">
                   {selectedTicket.title}
                 </h2>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-white/70">
                   Submitted by{" "}
-                  <strong>{selectedTicket.customer_name || "Customer"}</strong>{" "}
+                  <strong className="text-white">{selectedTicket.customer_name || "Customer"}</strong>{" "}
                   on {new Date(selectedTicket.created_at).toLocaleString()}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedTicket(null)}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                className="rounded-xl p-2 text-white/60 hover:bg-white/10 hover:text-white"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Complaint description */}
-            <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
-              <p className="text-[11px] font-bold uppercase text-slate-400">
+            <div className="mt-4 rounded-xl border border-white/15 bg-white/5 p-4 text-sm text-white/90">
+              <p className="text-[11px] font-bold uppercase text-rose-300">
                 Complaint Details
               </p>
               <p className="mt-1 leading-relaxed">
                 {selectedTicket.description}
               </p>
               {selectedTicket.attachment_name && (
-                <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700">
-                  <Paperclip className="h-3.5 w-3.5 text-blue-600" />
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white">
+                  <Paperclip className="h-3.5 w-3.5 text-rose-300" />
                   {selectedTicket.attachment_name}
                 </div>
               )}
@@ -375,14 +375,14 @@ export default function AdminTicketsPage() {
             {/* Assignment & Status Form */}
             <form
               onSubmit={handleSaveTicketChanges}
-              className="mt-5 space-y-4 rounded-2xl border border-blue-100 bg-blue-50/40 p-5"
+              className="mt-5 space-y-4 rounded-2xl border border-rose-500/30 bg-rose-950/30 p-5"
             >
-              <h3 className="text-sm font-bold text-slate-900">
+              <h3 className="text-sm font-bold text-white">
                 Allocate Department, Staff & Priority
               </h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700">
+                  <label className="mb-1 block text-xs font-semibold text-white/80">
                     Department
                   </label>
                   <select
@@ -390,7 +390,7 @@ export default function AdminTicketsPage() {
                     onChange={(e) =>
                       setEditDepartment(e.target.value as DepartmentName)
                     }
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-white/20 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white outline-none focus:border-rose-400"
                   >
                     {DEPARTMENTS.map((d) => (
                       <option key={d} value={d}>
@@ -401,13 +401,13 @@ export default function AdminTicketsPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700">
+                  <label className="mb-1 block text-xs font-semibold text-white/80">
                     Assign Support Staff
                   </label>
                   <select
                     value={editStaffId}
                     onChange={(e) => setEditStaffId(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-white/20 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white outline-none focus:border-rose-400"
                   >
                     <option value="">-- Unassigned --</option>
                     {staffList.map((s) => (
@@ -419,7 +419,7 @@ export default function AdminTicketsPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700">
+                  <label className="mb-1 block text-xs font-semibold text-white/80">
                     Priority
                   </label>
                   <select
@@ -427,7 +427,7 @@ export default function AdminTicketsPage() {
                     onChange={(e) =>
                       setEditPriority(e.target.value as TicketPriority)
                     }
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-white/20 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white outline-none focus:border-rose-400"
                   >
                     {TICKET_PRIORITIES.map((p) => (
                       <option key={p} value={p}>
@@ -438,7 +438,7 @@ export default function AdminTicketsPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700">
+                  <label className="mb-1 block text-xs font-semibold text-white/80">
                     Ticket Status
                   </label>
                   <select
@@ -446,7 +446,7 @@ export default function AdminTicketsPage() {
                     onChange={(e) =>
                       setEditStatus(e.target.value as TicketStatus)
                     }
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-white/20 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white outline-none focus:border-rose-400"
                   >
                     {TICKET_STATUSES.map((s) => (
                       <option key={s} value={s}>
@@ -458,7 +458,7 @@ export default function AdminTicketsPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-700">
+                <label className="mb-1 block text-xs font-semibold text-white/80">
                   Admin Update / Allocation Note (Optional)
                 </label>
                 <input
@@ -466,7 +466,7 @@ export default function AdminTicketsPage() {
                   value={adminNote}
                   onChange={(e) => setAdminNote(e.target.value)}
                   placeholder="e.g., Escalated to Billing specialist for priority review."
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 outline-none focus:border-blue-500"
+                  className="w-full rounded-xl border border-white/20 bg-black/40 px-3.5 py-2 text-xs text-white placeholder-white/40 outline-none focus:border-rose-400"
                 />
               </div>
 
@@ -474,14 +474,14 @@ export default function AdminTicketsPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedTicket(null)}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                  className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white hover:bg-white/20"
                 >
                   Close
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60 transition"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 px-5 py-2 text-xs font-semibold text-white shadow-md shadow-rose-950/40 hover:from-red-500 hover:to-rose-500 disabled:opacity-60 transition"
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   {saving ? "Saving..." : "Save & Notify"}
@@ -491,24 +491,24 @@ export default function AdminTicketsPage() {
 
             {/* Activity History */}
             <div className="mt-5">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-rose-300">
                 Status Update History ({ticketUpdates.length})
               </h4>
               <div className="mt-2.5 space-y-2">
                 {ticketUpdates.map((u) => (
                   <div
                     key={u.id}
-                    className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs"
+                    className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-800">
+                      <span className="font-bold text-white">
                         {u.updated_by_name} → {u.new_status}
                       </span>
-                      <span className="text-slate-400">
+                      <span className="text-white/60">
                         {new Date(u.created_at).toLocaleString()}
                       </span>
                     </div>
-                    <p className="mt-1 text-slate-600">{u.notes}</p>
+                    <p className="mt-1 text-white/80">{u.notes}</p>
                   </div>
                 ))}
               </div>

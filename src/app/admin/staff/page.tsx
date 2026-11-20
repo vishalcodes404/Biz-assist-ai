@@ -103,8 +103,8 @@ export default function AdminStaffManagementPage() {
           onClick={() => setTab("staff")}
           className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition ${
             tab === "staff"
-              ? "bg-blue-600 text-white shadow-sm"
-              : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-rose-950/40"
+              : "border border-white/20 bg-white/10 text-white/80 hover:bg-white/20"
           }`}
         >
           <Wrench className="h-4 w-4" />
@@ -114,8 +114,8 @@ export default function AdminStaffManagementPage() {
           onClick={() => setTab("customers")}
           className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition ${
             tab === "customers"
-              ? "bg-blue-600 text-white shadow-sm"
-              : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-rose-950/40"
+              : "border border-white/20 bg-white/10 text-white/80 hover:bg-white/20"
           }`}
         >
           <Users className="h-4 w-4" />
@@ -128,14 +128,14 @@ export default function AdminStaffManagementPage() {
           {/* Add Staff Form */}
           <form
             onSubmit={handleAddStaff}
-            className="h-fit space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-card"
+            className="glass-card h-fit space-y-4 rounded-2xl p-6 shadow-card"
           >
-            <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
-              <UserPlus className="h-4 w-4 text-blue-600" />
+            <div className="flex items-center gap-2 text-sm font-bold text-white">
+              <UserPlus className="h-4 w-4 text-rose-400" />
               Add Support Staff Member
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700">
+              <label className="mb-1 block text-xs font-semibold text-white/80">
                 Full Name
               </label>
               <input
@@ -144,11 +144,11 @@ export default function AdminStaffManagementPage() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="e.g., Maya Patel"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm outline-none focus:border-blue-500 focus:bg-white"
+                className="w-full rounded-xl border border-white/20 bg-black/40 px-3.5 py-2 text-sm text-white placeholder-white/40 outline-none focus:border-rose-400 focus:bg-black/60"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700">
+              <label className="mb-1 block text-xs font-semibold text-white/80">
                 Work Email
               </label>
               <input
@@ -157,17 +157,17 @@ export default function AdminStaffManagementPage() {
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 placeholder="maya@bizassist.demo"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm outline-none focus:border-blue-500 focus:bg-white"
+                className="w-full rounded-xl border border-white/20 bg-black/40 px-3.5 py-2 text-sm text-white placeholder-white/40 outline-none focus:border-rose-400 focus:bg-black/60"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700">
+              <label className="mb-1 block text-xs font-semibold text-white/80">
                 Department
               </label>
               <select
                 value={newDept}
                 onChange={(e) => setNewDept(e.target.value as DepartmentName)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:bg-white"
+                className="w-full rounded-xl border border-white/20 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-rose-400"
               >
                 {DEPARTMENTS.map((d) => (
                   <option key={d} value={d}>
@@ -179,25 +179,25 @@ export default function AdminStaffManagementPage() {
             <button
               type="submit"
               disabled={adding}
-              className="w-full rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-60 transition"
+              className="w-full rounded-xl bg-gradient-to-r from-red-600 to-rose-600 py-2.5 text-xs font-bold text-white shadow-md shadow-rose-950/40 hover:from-red-500 hover:to-rose-500 disabled:opacity-60 transition"
             >
               {adding ? "Adding Staff..." : "Create Staff Account"}
             </button>
           </form>
 
           {/* Staff Table */}
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card lg:col-span-2">
-            <div className="border-b border-slate-100 px-6 py-4">
-              <h3 className="text-sm font-bold text-slate-900">
+          <div className="glass-card overflow-hidden rounded-2xl shadow-card lg:col-span-2">
+            <div className="border-b border-white/10 px-6 py-4">
+              <h3 className="text-sm font-bold text-white">
                 Active Support Staff Directory
               </h3>
             </div>
             {loading ? (
-              <div className="p-8 text-center text-xs text-slate-500">
+              <div className="p-8 text-center text-xs text-white/70">
                 Loading staff accounts...
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-white/10">
                 {staffMembers.map((member) => {
                   const assignedCount = tickets.filter(
                     (t) => t.assigned_staff_id === member.id
@@ -214,7 +214,7 @@ export default function AdminStaffManagementPage() {
                       className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-xs font-bold text-white">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-red-600 to-rose-600 text-xs font-bold text-white shadow-md shadow-rose-950/40">
                           {member.full_name
                             .split(" ")
                             .map((w) => w[0])
@@ -223,10 +223,10 @@ export default function AdminStaffManagementPage() {
                             .toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-900">
+                          <p className="text-sm font-bold text-white">
                             {member.full_name}
                           </p>
-                          <p className="flex items-center gap-1 text-xs text-slate-500">
+                          <p className="flex items-center gap-1 text-xs text-white/70">
                             <Mail className="h-3 w-3" />
                             {member.email}
                           </p>
@@ -235,7 +235,7 @@ export default function AdminStaffManagementPage() {
 
                       <div className="flex flex-wrap items-center gap-3">
                         <div className="flex items-center gap-1.5">
-                          <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                          <Building2 className="h-3.5 w-3.5 text-white/60" />
                           <select
                             value={member.department || "General Support"}
                             onChange={(e) =>
@@ -244,7 +244,7 @@ export default function AdminStaffManagementPage() {
                                 e.target.value as DepartmentName
                               )
                             }
-                            className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500"
+                            className="rounded-lg border border-white/20 bg-zinc-900 px-2.5 py-1.5 text-xs font-semibold text-white outline-none focus:border-rose-400"
                           >
                             {DEPARTMENTS.map((d) => (
                               <option key={d} value={d}>
@@ -253,7 +253,7 @@ export default function AdminStaffManagementPage() {
                             ))}
                           </select>
                         </div>
-                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                        <span className="rounded-full border border-rose-500/30 bg-rose-950/60 px-2.5 py-1 text-xs font-semibold text-rose-300">
                           {assignedCount} Assigned • {resolvedCount} Resolved
                         </span>
                       </div>
@@ -266,15 +266,15 @@ export default function AdminStaffManagementPage() {
         </div>
       ) : (
         /* Customers Table */
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
-          <div className="border-b border-slate-100 px-6 py-4">
-            <h3 className="text-sm font-bold text-slate-900">
+        <div className="glass-card overflow-hidden rounded-2xl shadow-card">
+          <div className="border-b border-white/10 px-6 py-4">
+            <h3 className="text-sm font-bold text-white">
               Registered Customer Accounts
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase text-slate-500">
+              <thead className="border-b border-white/10 bg-white/5 text-xs uppercase text-white/70">
                 <tr>
                   <th className="px-6 py-3 font-semibold">Customer Name</th>
                   <th className="px-6 py-3 font-semibold">Email</th>
@@ -283,7 +283,7 @@ export default function AdminStaffManagementPage() {
                   <th className="px-6 py-3 font-semibold">Registered On</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-white/10">
                 {customers.map((c) => {
                   const custTickets = tickets.filter(
                     (t) => t.customer_id === c.id
@@ -292,20 +292,20 @@ export default function AdminStaffManagementPage() {
                     ["Resolved", "Closed"].includes(t.status)
                   ).length;
                   return (
-                    <tr key={c.id} className="hover:bg-slate-50/70">
-                      <td className="px-6 py-4 font-semibold text-slate-900">
+                    <tr key={c.id} className="hover:bg-white/10 transition">
+                      <td className="px-6 py-4 font-semibold text-white">
                         {c.full_name}
                       </td>
-                      <td className="px-6 py-4 text-xs text-slate-600">
+                      <td className="px-6 py-4 text-xs text-white/70">
                         {c.email}
                       </td>
-                      <td className="px-6 py-4 text-xs font-bold text-blue-600">
+                      <td className="px-6 py-4 text-xs font-bold text-rose-300">
                         {custTickets.length}
                       </td>
-                      <td className="px-6 py-4 text-xs font-bold text-emerald-600">
+                      <td className="px-6 py-4 text-xs font-bold text-emerald-400">
                         {custResolved}
                       </td>
-                      <td className="px-6 py-4 text-xs text-slate-500">
+                      <td className="px-6 py-4 text-xs text-white/60">
                         {new Date(c.created_at).toLocaleDateString()}
                       </td>
                     </tr>
