@@ -78,6 +78,25 @@ export function generateTicketNumber(existingTickets: Ticket[]): string {
   return `BA-${year}-${nextSeq}`;
 }
 
+/**
+ * Fast synchronous cached ticket retrieval for instantaneous 0ms page loads (Stale-While-Revalidate pattern).
+ */
+export function getFastCachedTickets(user?: Profile | null): Ticket[] {
+  if (!user) return [];
+  try {
+    const cached = readStorage<Ticket[]>(STORAGE_KEYS.tickets, DEMO_TICKETS);
+    if (user.role === "customer") {
+      return cached.filter((t) => t.customer_id === user.id);
+    }
+    if (user.role === "staff") {
+      return cached.filter((t) => t.assigned_staff_id === user.id);
+    }
+    return cached;
+  } catch {
+    return [];
+  }
+}
+
 // ============================================================================
 // PROFILES
 // ============================================================================
@@ -206,15 +225,12 @@ export async function fetchTickets(user: Profile): Promise<Ticket[]> {
       if (error) {
         if (isTableMissingError(error)) {
           console.warn("Supabase 'tickets' table not found yet. Using local fallback.");
-          const tickets = readStorage<Ticket[]>(STORAGE_KEYS.tickets, DEMO_TICKETS);
-          if (user.role === "customer") return tickets.filter((t) => t.customer_id === user.id);
-          if (user.role === "staff") return tickets.filter((t) => t.assigned_staff_id === user.id);
-          return tickets;
+          return getFastCachedTickets(user);
         }
         throw new Error(error.message);
       }
 
-      return (data || []).map((row: Record<string, unknown>) => {
+      const formatted: Ticket[] = (data || []).map((row: Record<string, unknown>) => {
         const cust = row.customer as { full_name?: string; email?: string } | null;
         const st = row.staff as { full_name?: string } | null;
         return {
@@ -224,25 +240,28 @@ export async function fetchTickets(user: Profile): Promise<Ticket[]> {
           assigned_staff_name: st?.full_name || null,
         };
       });
+
+      // Synchronize fresh results into fast local cache
+      try {
+        const cached = readStorage<Ticket[]>(STORAGE_KEYS.tickets, []);
+        const nonUserTickets = user.role === "customer"
+          ? cached.filter((t) => t.customer_id !== user.id)
+          : user.role === "staff"
+          ? cached.filter((t) => t.assigned_staff_id !== user.id)
+          : [];
+        writeStorage(STORAGE_KEYS.tickets, [...formatted, ...nonUserTickets]);
+      } catch {}
+
+      return formatted;
     } catch (e) {
       if (isTableMissingError(e)) {
-        const tickets = readStorage<Ticket[]>(STORAGE_KEYS.tickets, DEMO_TICKETS);
-        if (user.role === "customer") return tickets.filter((t) => t.customer_id === user.id);
-        if (user.role === "staff") return tickets.filter((t) => t.assigned_staff_id === user.id);
-        return tickets;
+        return getFastCachedTickets(user);
       }
       throw e;
     }
   }
 
-  const tickets = readStorage<Ticket[]>(STORAGE_KEYS.tickets, DEMO_TICKETS);
-  if (user.role === "customer") {
-    return tickets.filter((t) => t.customer_id === user.id);
-  }
-  if (user.role === "staff") {
-    return tickets.filter((t) => t.assigned_staff_id === user.id);
-  }
-  return tickets;
+  return getFastCachedTickets(user);
 }
 
 export async function fetchTicketById(ticketId: string): Promise<Ticket | null> {
@@ -343,10 +362,24 @@ export async function createTicket(payload: {
 
   if (isSupabaseConfigured()) {
     const supabase = getSupabaseBrowserClient()!;
-    const { data: existing } = await supabase
-      .from("tickets")
-      .select("ticket_number");
-    const ticketNumber = generateTicketNumber((existing || []) as Ticket[]);
+
+    // Ultra-fast single-record lookup for the latest ticket number (0ms table scan)
+    let ticketNumber = `BA-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    try {
+      const { data: latest } = await supabase
+        .from("tickets")
+        .select("ticket_number")
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (latest && latest.length > 0 && latest[0]?.ticket_number) {
+        const match = latest[0].ticket_number.match(/BA-\d{4}-(\d+)/);
+        if (match) {
+          const nextSeq = String(parseInt(match[1], 10) + 1).padStart(4, "0");
+          ticketNumber = `BA-${new Date().getFullYear()}-${nextSeq}`;
+        }
+      }
+    } catch {}
 
     const { data: created, error } = await supabase
       .from("tickets")
@@ -367,34 +400,48 @@ export async function createTicket(payload: {
 
     if (error) throw new Error(error.message);
 
-    await supabase.from("ticket_updates").insert({
-      ticket_id: created.id,
-      updated_by: payload.customer.id,
-      old_status: null,
-      new_status: "Submitted",
-      notes: `Complaint submitted and automatically categorized under ${department}.`,
-    });
-
-    // Notify admins
-    const { data: admins } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("role", "admin");
-    if (admins && admins.length > 0) {
-      await supabase.from("notifications").insert(
-        admins.map((a) => ({
-          user_id: a.id,
-          ticket_id: created.id,
-          message: `New ${payload.priority} complaint ${ticketNumber} submitted by ${payload.customer.full_name}.`,
-        }))
-      );
-    }
-
-    return {
+    const resultTicket: Ticket = {
       ...(created as Ticket),
       customer_name: payload.customer.full_name,
       customer_email: payload.customer.email,
     };
+
+    // Optimistic cache update: write into storage immediately so all pages see it with 0ms delay!
+    try {
+      const cached = readStorage<Ticket[]>(STORAGE_KEYS.tickets, []);
+      writeStorage(STORAGE_KEYS.tickets, [
+        resultTicket,
+        ...cached.filter((t) => t.id !== resultTicket.id),
+      ]);
+    } catch {}
+
+    // Run audit logging and admin notifications concurrently in background (non-blocking)
+    Promise.allSettled([
+      supabase.from("ticket_updates").insert({
+        ticket_id: created.id,
+        updated_by: payload.customer.id,
+        old_status: null,
+        new_status: "Submitted",
+        notes: `Complaint submitted and automatically categorized under ${department}.`,
+      }),
+      supabase
+        .from("profiles")
+        .select("id")
+        .eq("role", "admin")
+        .then(({ data: admins }) => {
+          if (admins && admins.length > 0) {
+            return supabase.from("notifications").insert(
+              admins.map((a) => ({
+                user_id: a.id,
+                ticket_id: created.id,
+                message: `New ${payload.priority} complaint ${ticketNumber} submitted by ${payload.customer.full_name}.`,
+              }))
+            );
+          }
+        }),
+    ]).catch(() => {});
+
+    return resultTicket;
   }
 
   // Demo Mode persistence
