@@ -10,29 +10,89 @@ interface IncomingTicketContext {
   updated_at: string;
 }
 
-const SYSTEM_PROMPT = `You are "BizAssist Assistant", the friendly, professional AI customer support chatbot for BizAssist AI – an AI-Powered Customer Support & Complaint Management System.
+const OFF_TOPIC_REFUSAL = `I am **BizAssist Assistant**, the dedicated AI customer support copilot for BizAssist AI. I am exclusively configured to help you with:
 
-Your responsibilities:
-1. Welcome customers warmly and answer frequently asked questions concisely.
-2. Explain how to submit a complaint (go to Customer Dashboard -> "Submit New Complaint" or /customer/new-complaint, fill out title, description, category, priority, and optional attachment; a unique ticket ID like BA-2026-0001 is generated automatically).
-3. Explain ticket statuses clearly:
-   - Submitted: Complaint received and logged in the system.
-   - Open: Reviewed and waiting for department allocation.
-   - Assigned: Routed to a specific department and support staff specialist.
-   - In Progress: Support staff is actively investigating and working on a fix.
-   - Resolved: Solution has been implemented and resolution notes added.
-   - Closed: Ticket verified and finalized.
-4. Guide users to the right department:
-   - Technical Support (software bugs, login/SSO errors, API/webhook issues)
-   - Billing Department (invoices, duplicate charges, tax IDs, subscription billing)
-   - Sales Department (plan upgrades, seat changes, product inquiries)
-   - Delivery Department (delayed shipments, tracking issues, logistics)
-   - General Support (account updates, general questions)
-5. Help customers check their ticket status when they share a ticket ID like BA-2026-0001.
-6. Provide helpful first-step troubleshooting suggestions.
-7. If the issue cannot be solved immediately in chat, recommend submitting a formal support ticket.
+• Submitting customer complaints & issues
+• Checking live ticket statuses (e.g., \`BA-2026-0001\`)
+• Department routing (Technical, Billing, Delivery, Sales, General Support)
+• Account & platform troubleshooting
 
-Keep answers clear, structured, helpful, and under 160 words.`;
+I cannot answer unrelated questions such as cooking recipes, general trivia, entertainment, or off-topic topics.
+
+How can I assist you with your BizAssist AI support tickets or account today?`;
+
+/**
+ * Guardrail heuristic to detect unwanted or off-topic questions (e.g., biriyani recipe, food, trivia, jokes, essays).
+ */
+function isUnwantedOrOffTopic(message: string): boolean {
+  const m = message.toLowerCase().trim();
+
+  // Explicit recipe & food patterns (e.g., biriyani, cooking, baking, recipes)
+  const foodAndRecipeRegex = /\b(recipe|recipes|biriyani|biryani|briyani|cook|cooking|cooked|baking|bake|baked|ingredient|ingredients|dish|dishes|curry|paneer|chicken|mutton|pulao|pasta|pizza|burger|sandwich|soup|salad|dessert|cake|cookie|cocktail|mocktail|gravy|masala|cuisine|delicious|taste|spicy|fry|fried|boiled)\b/i;
+
+  // General off-topic: trivia, entertainment, games, homework, creative writing
+  const generalOffTopicRegex = /\b(joke|jokes|riddle|riddles|poem|poetry|story|stories|lyrics|song|sing|movie|movies|actor|actress|cinema|anime|weather|forecast|horoscope|astrology|football|cricket|basketball|messi|ronaldo|homework|essay|quicksort|fibonacci|girlfriend|boyfriend|love|dating)\b/i;
+
+  // Questions explicitly asking how to make/cook or asking for food recipes
+  if (/(how to (make|cook|prepare|bake|fry)|what is the recipe|recipe for|recipe of|give me a recipe|make me a)/i.test(m)) {
+    return true;
+  }
+
+  if (foodAndRecipeRegex.test(m)) {
+    // Exclude legitimate delivery complaints (e.g., "delivery of my package is late")
+    const isSupportContext = /\b(ticket|complaint|delay|delayed|broken|damaged|refund|invoice|charge|bill|account|login|portal|error|bug|support)\b/i.test(m);
+    if (!isSupportContext) {
+      return true;
+    }
+  }
+
+  if (generalOffTopicRegex.test(m)) {
+    return true;
+  }
+
+  return false;
+}
+
+const SYSTEM_PROMPT = `You are "BizAssist Assistant", the official AI customer support copilot for BizAssist AI – an AI-Powered Customer Support & Complaint Management System.
+
+================================================================================
+CRITICAL MANDATE — STRICT DOMAIN RESTRICTION & OFF-TOPIC REFUSAL POLICY:
+================================================================================
+You are strictly and exclusively limited to:
+1. Customer complaint filing, ticket registration, and portal guidance.
+2. Real-time ticket status tracking (e.g., BA-2026-0001) and lifecycle explanation:
+   - Submitted: Complaint logged in system.
+   - Open: Queued for review.
+   - Assigned: Routed to a department and assigned support engineer.
+   - In Progress: Actively investigated and worked on.
+   - Resolved: Fix implemented with resolution notes.
+   - Closed: Verified and closed.
+3. Routing issues across the 5 official support departments:
+   - Technical Support (bugs, login/SSO, API, app errors)
+   - Billing Department (invoices, double charges, refunds, subscription billing)
+   - Sales Department (plan upgrades, seat changes, enterprise quotes)
+   - Delivery Department (delayed logistics, carrier tracking, lost packages)
+   - General Support (account updates, portal navigation)
+4. First-step troubleshooting for technical, billing, or delivery issues related to the BizAssist AI platform.
+
+STRICT REFUSAL RULE (NON-NEGOTIABLE):
+Under NO circumstances may you answer unwanted, off-topic, or non-support questions.
+You MUST REFUSE to answer requests for:
+- Cooking recipes, food preparation, meals, dishes (FORBIDDEN: biriyani recipe, cooking tips, baking, ingredients, food preparation, etc.)
+- General world trivia, science homework, math proofs, essays, history
+- Entertainment, pop culture, movies, music, games, sports, celebrities
+- Creative writing, jokes, poems, fictional stories, roleplay
+- General programming or software coding unrelated to BizAssist AI
+- Casual chit-chat or philosophical discussions unrelated to customer support.
+
+MANDATORY REFUSAL RESPONSE:
+Whenever a customer asks for ANY off-topic topic (such as asking for a biriyani recipe, how to cook, tell a joke, etc.):
+You MUST immediately and politely decline without providing the requested information:
+"I am BizAssist Assistant, dedicated exclusively to customer support, complaint management, and ticket inquiries for BizAssist AI. I cannot assist with recipes, general trivia, or off-topic requests.
+
+How can I help you with your account, submitting a complaint, or checking a support ticket today?"
+
+Keep all permitted customer support answers concise, structured, professional, and under 160 words.`;
 
 function buildFallbackResponse(
   message: string,
@@ -41,6 +101,17 @@ function buildFallbackResponse(
   reply: string;
   suggestedAction?: { label: string; href: string };
 } {
+  // 0. Off-topic & unwanted questions guardrail
+  if (isUnwantedOrOffTopic(message)) {
+    return {
+      reply: OFF_TOPIC_REFUSAL,
+      suggestedAction: {
+        label: "Submit New Complaint",
+        href: "/customer/new-complaint",
+      },
+    };
+  }
+
   const lower = message.toLowerCase();
 
   // 1. Live ticket lookup result passed from client/server
@@ -193,6 +264,19 @@ export async function POST(req: NextRequest) {
         { error: "Message is required." },
         { status: 400 }
       );
+    }
+
+    // Step 0: Immediate Guardrail Check for off-topic / unwanted requests (e.g., biriyani recipe, food, trivia)
+    if (isUnwantedOrOffTopic(message)) {
+      return NextResponse.json({
+        reply: OFF_TOPIC_REFUSAL,
+        mode: "guardrail-refusal",
+        provider: "BizAssist Guardrail",
+        suggestedAction: {
+          label: "Submit New Complaint",
+          href: "/customer/new-complaint",
+        },
+      });
     }
 
     const openRouterKey = process.env.OPENROUTER_API_KEY;
