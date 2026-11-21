@@ -26,19 +26,8 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/staff");
 
   if (isProtectedPath) {
-    // Check if Supabase session token cookie or demo session cookie exists
-    const hasSbToken = request.cookies
-      .getAll()
-      .some(
-        (c) =>
-          c.name.startsWith("sb-") &&
-          (c.name.endsWith("-auth-token") || c.name.includes("auth"))
-      );
-
     // Note: In client-side demo mode, localStorage is used, so client-side
     // DashboardShell handles the redirect if no demo user exists.
-    // If you want strict server enforcement with Supabase:
-    // if (!hasSbToken && !isDemo) redirect to /login
   }
 
   return response;

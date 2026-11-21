@@ -209,7 +209,7 @@ function validateAiResponse(reply: string, userMessage: string): string {
   if (
     /\b(ingredients:|tablespoon|teaspoon|marinate|preheat\s+oven|simmer\s+for|cook\s+on\s+medium)\b/i.test(r)
   ) {
-    return OFF_TOPIC_REFIT_SAFE(r);
+    return OFF_TOPIC_REFUSAL;
   }
 
   // Check if AI generated sports match summaries
@@ -242,10 +242,6 @@ function validateAiResponse(reply: string, userMessage: string): string {
   }
 
   return r;
-}
-
-function OFF_TOPIC_REFIT_SAFE(_content: string): string {
-  return OFF_TOPIC_REFUSAL;
 }
 
 const SYSTEM_PROMPT = `You are BizAssist AI, the customer support assistant for BizAssist AI (an AI-Powered Customer Support & Complaint Management System).
